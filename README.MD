@@ -52,6 +52,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+
+
+
 // Multer configuration for file storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -65,7 +68,12 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+
+
+
 // Route to handle file uploads
+
+
 app.post("/", upload.single("myfile"), async (req, res) => {
   try {
     if (!req.file) {
@@ -74,6 +82,7 @@ app.post("/", upload.single("myfile"), async (req, res) => {
 
     // Upload file to Cloudinary
     const uploadResult = await cloudinary.uploader.upload(req.file.path);
+
 
     // Remove file from local storage after upload
     fs.unlink(req.file.path, (err) => {
@@ -84,14 +93,20 @@ app.post("/", upload.single("myfile"), async (req, res) => {
       }
     });
 
+
     res.status(200).json(uploadResult);
+
+    
   } catch (error) {
     console.error("Error uploading file:", error);
     res.status(500).json({ error: "File upload failed" });
   }
 });
 
+
+
 // Start the server
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
