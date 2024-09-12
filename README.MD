@@ -4,8 +4,7 @@
 - generate uniqe name using **uuid**.
 - Stores files in **Cloudinary**.
 - Removes uploaded files from local storage after successful upload.
-
-then we need to store "secure_url" to our database;
+- then we need to store "secure_url" to our database;
 
 ### File Structure
 
@@ -17,9 +16,11 @@ then we need to store "secure_url" to our database;
 ├── index.js                # Main application file
 ├── package.json            # Dependencies and scripts
 └── README.md               # Project documentation
+```
 
+## index.js
 
-
+```bash
 import express from "express";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
@@ -84,3 +85,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+```
