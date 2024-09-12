@@ -6,6 +6,17 @@
 - Removes uploaded files from local storage after successful upload.
 - then we need to store "secure_url" to our database;
 
+
+## Install Dependencies
+
+```bash
+npm i multer
+npm i uuid
+npm i cloudinary
+```
+
+
+
 ### File Structure
 
 ```plaintext
@@ -20,7 +31,7 @@
 
 ## index.js
 
-```bash
+```js
 import express from "express";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
