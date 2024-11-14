@@ -1,11 +1,12 @@
 ### File Upload API with Express, Multer, and Cloudinary
+
 ## Main Features:
+
 - Secure file uploading using **Multer**.
 - generate uniqe name using **uuid**.
 - Stores files in **Cloudinary**.
 - Removes uploaded files from local storage after successful upload.
 - then we need to store "secure_url" to our database;
-
 
 ## Install Dependencies
 
@@ -15,46 +16,25 @@ npm i uuid
 npm i cloudinary
 ```
 
-
-
-### File Structure
-
-```plaintext
-├── db/
-│   └── db.js               # Database configuration (optional)
-├── uploads/                # Directory for temporarily storing uploaded files
-├── .env                    # Environment variables file
-├── index.js                # Main application file
-├── package.json            # Dependencies and scripts
-└── README.md               # Project documentation
-```
-
-## index.js
+## cloudinaryConfig.js
 
 ```js
-import express from "express";
+import { v2 as cloudinary } from "cloudinary";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
-import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
-import path from "path";
-
-process.loadEnvFile(); // Load environment variables from .env file
-import "./db/db.js"; // Import database configuration
-
-const app = express();
-
-// Cloudinary configuration using environment variables
+import dotenv from "dotenv";
+dotenv.config();
+// process.loadEnvFile();
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Multer configuration for file storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "./uploads");
+    cb(null, "./public/temp");
   },
   filename: function (req, file, cb) {
     const uniqueName = `${uuidv4()}-${file.originalname}`;
@@ -62,40 +42,69 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+export const upload = multer({ storage });
+```
 
-// Route to handle file uploads
+## router
 
-app.post("/", upload.single("myfile"), async (req, res) => {
+```js
+import express from "express";
+const router = express.Router();
+import { upload } from "../config/cloudinaryConfig.js";
+import { profilePicture } from "../controllers/mediaController/profilePicture.js";
+import authMiddleware from "../middlewares/authMiddleware.js";
+
+router.post(
+  "/profile-picture",
+  authMiddleware,
+  upload.single("myfile"),
+  profilePicture
+);
+
+export default router;
+```
+
+## controller
+
+```js
+// Profile Picture Upload Handler (profilePicture.js)
+import { v2 as cloudinary } from "cloudinary";
+import User from "../../models/User.js";
+import fs from "fs"; // You might use fs if you're cleaning up files after uploading
+
+export const profilePicture = async (req, res) => {
+  const userId = req.user.id;
   try {
+    // Check if file was uploaded
     if (!req.file) {
+      console.log("No file uploaded");
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    // Upload file to Cloudinary
-    const uploadResult = await cloudinary.uploader.upload(req.file.path);
-
-    // Remove file from local storage after upload
-    fs.unlink(req.file.path, (err) => {
-      if (err) {
-        console.error("Error deleting file:", err);
-      } else {
-        console.log("File successfully deleted from local storage");
-      }
+    // Upload the image to Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "myFolder", // Define folder in Cloudinary
     });
-    console.log(uploadResult.secure_url);
-    res.status(200).json(uploadResult);
+
+    await User.findByIdAndUpdate(userId, { profilePicture: result.secure_url });
+
+    // Return the Cloudinary URL to the client
+    return res.status(200).json({
+      success: true,
+      message: "Profile picture uploaded successfully",
+      url: result.secure_url, // Use the secure URL provided by Cloudinary
+    });
   } catch (error) {
     console.error("Error uploading file:", error);
-    res.status(500).json({ error: "File upload failed" });
+    return res.status(500).json({
+      success: false,
+      message: "Profile picture upload failed",
+    });
+  } finally {
+    // Delete the file from local storage after uploading
+    fs.unlink(req.file.path, (err) => {
+      if (err) console.error("Error deleting file:", err);
+    });
   }
-});
-
-// Start the server
-
-const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
+};
 ```
